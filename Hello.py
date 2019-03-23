@@ -4,12 +4,13 @@ import re
 
 
 class Picture(object):
-    def __init__(self, serialnum=None, extension=None, rating=0, info=None, action=None):
+    def __init__(self, serialnum=None, extension=None, rating=0, info=None, originalname=None, action='delete'):
         self.serialnum = serialnum
         self.extension = extension
         self.rating = rating
         self.info = info
         self.action = action
+        self.originalname = originalname
 
 
 def extract_sn(filename):
@@ -39,19 +40,33 @@ def print_picturelist(picturelist, actionfilter=""):
     for pic in picturelist:
         if actionfilter != "":
             if pic.action == actionfilter:
-                print(pic.serialnum)
-                print(pic.extension)
-                print(pic.rating)
-                print(pic.info)
-                print(pic.action)
+                print(pic.originalname)
+                print(".  .  .  .  .  .  .")
+                print(" SN: " + pic.serialnum)
+                print(" EXT: " + pic.extension)
+                print(" RATING: " + str(pic.rating))
+                print(" INFO: " + pic.info)
+                print(" ACTION: " + pic.action)
                 print('...................')
         else:
-            print(pic.serialnum)
-            print(pic.extension)
-            print(pic.rating)
-            print(pic.info)
-            print(pic.action)
+            print(pic.originalname)
+            print(".  .  .  .  .  .  .")
+            print(" SN: " + pic.serialnum)
+            print(" EXT: " + pic.extension)
+            print(" RATING: " + str(pic.rating))
+            print(" INFO: " + pic.info)
+            print(" ACTION: " + pic.action)
             print('...................')
+
+
+def get_stats(picturelist):
+    stats = dict()
+    for pic in picturelist:
+        if pic.action in stats:
+           stats[pic.action] = stats[pic.action] + 1
+        else:
+           stats[pic.action] = 1
+    return stats
 
 
 def build_filelist(filelist):
@@ -61,30 +76,21 @@ def build_filelist(filelist):
             extract_sn(filename),
             extract_extension(filename),
             extract_rating(filename),
-            extract_add_info(filename)))
+            extract_add_info(filename),
+            filename))
     return picturelist
 
 
 def compare(jpgs, raws):
-    raw_del_count = 0
-    jpg_del_count = 0
     for jpg in jpgs:
         hit = False
         for raw in raws:
             if jpg.serialnum == raw.serialnum:
-                print("HIT!!!")
-                jpg.action = 'none'
-                raw.action = 'none'
+                jpg.action = 'ok'
+                raw.action = 'ok'
                 hit = True
-            else:
-                if raw.action is None:
-                    print("NO HIT")
-                    raw.action = 'delete'
-                    raw_del_count = raw_del_count + 1
         if not hit:
             jpg.action = 'delete'
-            jpg_del_count = jpg_del_count + 1
-    return "Raw to be deleted " + str(raw_del_count) + " JPG to be deleted " + str(jpg_del_count)
 
 
 dirRaw="/home/asztrik/Documents/Work/cassio/cassio test/KUN R"
@@ -95,14 +101,14 @@ jpgFiles = [f for f in listdir(dirJpg) if isfile(join(dirJpg, f))]
 rawlist = build_filelist(rawFiles)
 jpglist = build_filelist(jpgFiles)
 
-print(compare(jpglist, rawlist))
+compare(jpglist, rawlist)
 
 print("JPG")
-print("===========")
+print(get_stats(jpglist))
 
-print_picturelist(jpglist, "delete")
+"""print_picturelist(jpglist, "delete")"""
 
 print("RAW")
-print("===========")
+print(get_stats(rawlist))
 
-print_picturelist(rawlist, "delete")
+"""print_picturelist(rawlist, "delete")"""
