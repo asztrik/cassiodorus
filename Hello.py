@@ -1,6 +1,10 @@
 from os import listdir
 from os.path import isfile, join
 import re
+import sys
+from PyQt5.QtWidgets import QApplication, QDialog, QLineEdit, QPushButton, QVBoxLayout
+
+"""Region: filename comparison"""
 
 
 class Picture(object):
@@ -93,22 +97,59 @@ def compare(jpgs, raws):
             jpg.action = 'delete'
 
 
-dirRaw="/home/asztrik/Documents/Work/cassio/cassio test/KUN R"
-dirJpg="/home/asztrik/Documents/Work/cassio/cassio test/KUN AJ"
-rawFiles = [f for f in listdir(dirRaw) if isfile(join(dirRaw, f))]
-jpgFiles = [f for f in listdir(dirJpg) if isfile(join(dirJpg, f))]
+def load_and_run(dirRaw, dirJpg):
+    rawFiles = [f for f in listdir(dirRaw) if isfile(join(dirRaw, f))]
+    jpgFiles = [f for f in listdir(dirJpg) if isfile(join(dirJpg, f))]
 
-rawlist = build_filelist(rawFiles)
-jpglist = build_filelist(jpgFiles)
+    rawlist = build_filelist(rawFiles)
+    jpglist = build_filelist(jpgFiles)
 
-compare(jpglist, rawlist)
+    compare(jpglist, rawlist)
 
-print("JPG")
-print(get_stats(jpglist))
+    print("JPG")
+    print(get_stats(jpglist))
 
-"""print_picturelist(jpglist, "delete")"""
+    """print_picturelist(jpglist, "delete")"""
 
-print("RAW")
-print(get_stats(rawlist))
+    print("RAW")
+    print(get_stats(rawlist))
 
-"""print_picturelist(rawlist, "delete")"""
+    """print_picturelist(rawlist, "delete")"""
+
+
+"""Region: GUI"""
+
+
+class Form(QDialog):
+    def __init__(self, parent=None):
+        super(Form, self).__init__(parent)
+        self.rawpath = QLineEdit("/home/asztrik/Documents/Work/cassio/cassio test/KUN R")
+        self.jpgpath = QLineEdit("/home/asztrik/Documents/Work/cassio/cassio test/KUN AJ")
+        self.button = QPushButton("Összehasonlítás indítása")
+        layout = QVBoxLayout()
+        layout.addWidget(self.rawpath)
+        layout.addWidget(self.jpgpath)
+        layout.addWidget(self.button)
+        self.setLayout(layout)
+        self.button.clicked.connect(self.greetings)
+        self.setFixedWidth(500)
+        self.setWindowTitle("Cassiodorus 4")
+
+    def greetings(self):
+        load_and_run(self.rawpath.text(), self.jpgpath.text())
+
+
+if __name__ == '__main__':
+    # Create the Qt Application
+    app = QApplication(sys.argv)
+    # Create and show the form
+    form = Form()
+    form.show()
+    # Run the main Qt loop
+    sys.exit(app.exec_())
+
+
+
+
+
+
