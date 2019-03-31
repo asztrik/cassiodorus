@@ -2,13 +2,13 @@ from os import listdir
 from os.path import isfile, join
 import re
 import sys
+import os
 from PyQt5.QtWidgets import QApplication, QDialog, QLineEdit, QPushButton, QVBoxLayout, QLabel
 
 """Region: filename comparison"""
 
-
 class Picture(object):
-    def __init__(self, serialnum=None, extension=None, rating=0, info=None, originalname=None, action='delete'):
+    def __init__(self, serialnum=None, extension=None, rating=0, info=None, originalname=None, action="törlendő"):
         self.serialnum = serialnum
         self.extension = extension
         self.rating = rating
@@ -99,11 +99,11 @@ def compare(jpgs, raws):
         hit = False
         for raw in raws:
             if jpg.serialnum == raw.serialnum:
-                jpg.action = 'ok'
-                raw.action = 'ok'
+                jpg.action = "rendben"
+                raw.action = "rendben"
                 hit = True
         if not hit:
-            jpg.action = 'delete'
+            jpg.action = "törlendő"
 
 
 def load_and_run(dirRaw, dirJpg):
@@ -116,26 +116,24 @@ def load_and_run(dirRaw, dirJpg):
     compare(jpglist, rawlist)
 
     jpgstats = get_stats(jpglist)
-    jpgdellist = get_picturelist(jpglist, "delete")
+    global jpgstodelete
+    jpgstodelete = get_picturelist(jpglist, "törlendő")
     rawstats = get_stats(rawlist)
-    rawdellist = get_picturelist(rawlist, "delete")
+    global rawstodelete
+    rawstodelete = get_picturelist(rawlist, "törlendő")
 
     print("JPG")
     print(jpgstats)
-    print(jpgdellist)
+    print(jpgstodelete)
 
     print("RAW")
     print(rawstats)
-    print(rawdellist)
+    print(rawstodelete)
 
-    returnstring = "Az összehasonlítás befejeződött.\nJPG:\n"\
+    returnstring = "A mappák állapota:\nJPG:\n"\
                    + str(jpgstats)\
-                   + "\nTörlendő:\n"\
-                   + str(jpgdellist)\
                    + "\nRAW:\n"\
-                   + str(rawstats) \
-                   + "\nTörlendő:\n" \
-                   + str(rawdellist)
+                   + str(rawstats)
 
     """TODO: display file list line by line, offer deleting only RAW only JPG, all..."""
 
@@ -152,18 +150,67 @@ class Form(QDialog):
         self.jpgpath = QLineEdit("C:\cassio test\KUN AJ")
         self.button = QPushButton("Összehasonlítás indítása")
         self.results = QLabel("Az indításhoz válassz mappákat!")
+        self.deljpgbutton = QPushButton("Pár nélküli JPG-k törlése")
+        self.delrawbutton = QPushButton("Pár nélküli RAW-ok törlése")
+        self.delallbutton = QPushButton("Összes pár nélküli törlése")
         layout = QVBoxLayout()
         layout.addWidget(self.rawpath)
         layout.addWidget(self.jpgpath)
         layout.addWidget(self.button)
         layout.addWidget(self.results)
+        layout.addWidget(self.deljpgbutton)
+        layout.addWidget(self.delrawbutton)
+        layout.addWidget(self.delallbutton)
+        self.deljpgbutton.hide()
+        self.delrawbutton.hide()
+        self.delallbutton.hide()
         self.setLayout(layout)
-        self.button.clicked.connect(self.greetings)
+        self.button.clicked.connect(self.docompare)
+        self.deljpgbutton.clicked.connect(self.deljpg)
+        self.delrawbutton.clicked.connect(self.delraw)
+        self.delallbutton.clicked.connect(self.delall)
         self.setFixedWidth(500)
         self.setWindowTitle("Cassiodorus 4")
 
-    def greetings(self):
+    def docompare(self):
         self.results.setText(load_and_run(self.rawpath.text(), self.jpgpath.text()))
+        self.deljpgbutton.show()
+        self.delrawbutton.show()
+        self.delallbutton.show()
+
+    def deljpg(self):
+        deletednum = 0
+        for jpg in jpgstodelete:
+            os.remove(self.jpgpath.text() + "\\" + str(jpg))
+            deletednum = deletednum + 1
+        if deletednum > 0:
+            self.results.setText(str(deletednum) + " db JPG törölve.")
+        else:
+            self.results.setText("Nem volt mit törölni.")
+
+    def delraw(self):
+        deletednum = 0
+        for raw in rawstodelete:
+            os.remove(self.rawpath.text() + "\\" + str(raw))
+            deletednum = deletednum + 1
+        if deletednum > 0:
+            self.results.setText(str(deletednum) + " db RAW törölve.")
+        else:
+            self.results.setText("Nem volt mit törölni.")
+
+    def delall(self):
+        deletednumj = 0
+        for jpg in jpgstodelete:
+            os.remove(self.jpgpath.text() + "\\" + str(jpg))
+            deletednumj = deletednumj + 1
+        deletednumr = 0
+        for raw in rawstodelete:
+            os.remove(self.rawpath.text() + "\\" + str(raw))
+            deletednumr = deletednumr + 1
+        if deletednumj > 0 and deletednumr > 0:
+            self.results.setText(str(deletednumj) + " db JPG törölve.\n"+str(deletednumr) + " db RAW törölve.")
+        else:
+            self.results.setText("Nem volt mit törölni.")
 
 
 if __name__ == '__main__':
