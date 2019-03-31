@@ -2,7 +2,7 @@ from os import listdir
 from os.path import isfile, join
 import re
 import sys
-from PyQt5.QtWidgets import QApplication, QDialog, QLineEdit, QPushButton, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QDialog, QLineEdit, QPushButton, QVBoxLayout, QLabel
 
 """Region: filename comparison"""
 
@@ -38,6 +38,15 @@ def extract_rating(filename):
         return len(m.group(1))
     else:
         return 0
+
+
+def get_picturelist(picturelist, actionfilter=""):
+    picturereslist = []
+    for pic in picturelist:
+        if actionfilter != "":
+            if pic.action == actionfilter:
+                picturereslist.append(pic.originalname)
+    return picturereslist
 
 
 def print_picturelist(picturelist, actionfilter=""):
@@ -106,15 +115,31 @@ def load_and_run(dirRaw, dirJpg):
 
     compare(jpglist, rawlist)
 
-    print("JPG")
-    print(get_stats(jpglist))
+    jpgstats = get_stats(jpglist)
+    jpgdellist = get_picturelist(jpglist, "delete")
+    rawstats = get_stats(rawlist)
+    rawdellist = get_picturelist(rawlist, "delete")
 
-    """print_picturelist(jpglist, "delete")"""
+    print("JPG")
+    print(jpgstats)
+    print(jpgdellist)
 
     print("RAW")
-    print(get_stats(rawlist))
+    print(rawstats)
+    print(rawdellist)
 
-    """print_picturelist(rawlist, "delete")"""
+    returnstring = "Az összehasonlítás befejeződött.\nJPG:\n"\
+                   + str(jpgstats)\
+                   + "\nTörlendő:\n"\
+                   + str(jpgdellist)\
+                   + "\nRAW:\n"\
+                   + str(rawstats) \
+                   + "\nTörlendő:\n" \
+                   + str(rawdellist)
+
+    """TODO: display file list line by line, offer deleting only RAW only JPG, all..."""
+
+    return returnstring
 
 
 """Region: GUI"""
@@ -123,20 +148,22 @@ def load_and_run(dirRaw, dirJpg):
 class Form(QDialog):
     def __init__(self, parent=None):
         super(Form, self).__init__(parent)
-        self.rawpath = QLineEdit("/home/asztrik/Documents/Work/cassio/cassio test/KUN R")
-        self.jpgpath = QLineEdit("/home/asztrik/Documents/Work/cassio/cassio test/KUN AJ")
+        self.rawpath = QLineEdit("C:\cassio test\KUN R")
+        self.jpgpath = QLineEdit("C:\cassio test\KUN AJ")
         self.button = QPushButton("Összehasonlítás indítása")
+        self.results = QLabel("Az indításhoz válassz mappákat!")
         layout = QVBoxLayout()
         layout.addWidget(self.rawpath)
         layout.addWidget(self.jpgpath)
         layout.addWidget(self.button)
+        layout.addWidget(self.results)
         self.setLayout(layout)
         self.button.clicked.connect(self.greetings)
         self.setFixedWidth(500)
         self.setWindowTitle("Cassiodorus 4")
 
     def greetings(self):
-        load_and_run(self.rawpath.text(), self.jpgpath.text())
+        self.results.setText(load_and_run(self.rawpath.text(), self.jpgpath.text()))
 
 
 if __name__ == '__main__':
