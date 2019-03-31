@@ -3,7 +3,7 @@ from os.path import isfile, join
 import re
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QDialog, QLineEdit, QPushButton, QVBoxLayout, QLabel
+from PyQt5.QtWidgets import QApplication, QDialog, QLineEdit, QPushButton, QVBoxLayout, QLabel, QFileDialog
 
 """Region: filename comparison"""
 
@@ -146,8 +146,8 @@ def load_and_run(dirRaw, dirJpg):
 class Form(QDialog):
     def __init__(self, parent=None):
         super(Form, self).__init__(parent)
-        self.rawpath = QLineEdit("C:\cassio test\KUN R")
-        self.jpgpath = QLineEdit("C:\cassio test\KUN AJ")
+        self.rawpath = QPushButton("RAW mappa kijelölése")
+        self.jpgpath = QPushButton("JPG mappa kijelölése")
         self.button = QPushButton("Összehasonlítás indítása")
         self.results = QLabel("Az indításhoz válassz mappákat!")
         self.deljpgbutton = QPushButton("Pár nélküli JPG-k törlése")
@@ -165,12 +165,20 @@ class Form(QDialog):
         self.delrawbutton.hide()
         self.delallbutton.hide()
         self.setLayout(layout)
+        self.jpgpath.clicked.connect(self.selectjpg)
+        self.rawpath.clicked.connect(self.selectraw)
         self.button.clicked.connect(self.docompare)
         self.deljpgbutton.clicked.connect(self.deljpg)
         self.delrawbutton.clicked.connect(self.delraw)
         self.delallbutton.clicked.connect(self.delall)
         self.setFixedWidth(500)
         self.setWindowTitle("Cassiodorus 4")
+
+    def selectjpg(self):
+        self.jpgpath.setText(str(QFileDialog.getExistingDirectory(self, "Válassz JPG-mappát")))
+
+    def selectraw(self):
+        self.rawpath.setText(str(QFileDialog.getExistingDirectory(self, "Válassz RAW-mappát")))
 
     def docompare(self):
         self.results.setText(load_and_run(self.rawpath.text(), self.jpgpath.text()))
