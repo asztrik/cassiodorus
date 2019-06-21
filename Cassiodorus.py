@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QApplication, QDialog, QLineEdit, QPushButton, QVBox
 
 """Region: filename comparison"""
 
+
 class Picture(object):
     def __init__(self, serialnum=None, extension=None, rating=0, info=None, originalname=None, action="törlendő"):
         self.serialnum = serialnum
@@ -19,17 +20,26 @@ class Picture(object):
 
 def extract_sn(filename):
     m = re.search(r"([A-Z]{3})([0-9]{4})", filename)
-    return m.group(1) + m.group(2)
+    if m is None:
+        return None
+    else:
+        return m.group(1) + m.group(2)
 
 
 def extract_add_info(filename):
     m = re.search(r"( [A-Za-z0-9 ]*)", filename)
-    return m.group(1)[1:]
+    if m is None:
+        return None
+    else:
+        return m.group(1)[1:]
 
 
 def extract_extension(filename):
     m = re.search(r"(\.[A-Za-z0-9]+)", filename)
-    return m.group(1)[1:]
+    if m is None:
+        return None
+    else:
+        return m.group(1)[1:]
 
 
 def extract_rating(filename):
@@ -76,21 +86,23 @@ def get_stats(picturelist):
     stats = dict()
     for pic in picturelist:
         if pic.action in stats:
-           stats[pic.action] = stats[pic.action] + 1
+            stats[pic.action] = stats[pic.action] + 1
         else:
-           stats[pic.action] = 1
+            stats[pic.action] = 1
     return stats
 
 
 def build_filelist(filelist):
     picturelist = []
     for filename in filelist:
-        picturelist.append(Picture(
-            extract_sn(filename),
-            extract_extension(filename),
-            extract_rating(filename),
-            extract_add_info(filename),
-            filename))
+        serialnum = extract_sn(filename)
+        if serialnum is not None:
+            picturelist.append(Picture(
+                serialnum,
+                extract_extension(filename),
+                extract_rating(filename),
+                extract_add_info(filename),
+                filename))
     return picturelist
 
 
@@ -153,6 +165,7 @@ class Form(QDialog):
         self.deljpgbutton = QPushButton("Pár nélküli JPG-k törlése")
         self.delrawbutton = QPushButton("Pár nélküli RAW-ok törlése")
         self.delallbutton = QPushButton("Összes pár nélküli törlése")
+        self.resetbutton = QPushButton("További mappák összehasonlítása")
         layout = QVBoxLayout()
         layout.addWidget(self.rawpath)
         layout.addWidget(self.jpgpath)
@@ -161,9 +174,11 @@ class Form(QDialog):
         layout.addWidget(self.deljpgbutton)
         layout.addWidget(self.delrawbutton)
         layout.addWidget(self.delallbutton)
+        layout.addWidget(self.resetbutton)
         self.deljpgbutton.hide()
         self.delrawbutton.hide()
         self.delallbutton.hide()
+        self.resetbutton.hide()
         self.setLayout(layout)
         self.jpgpath.clicked.connect(self.selectjpg)
         self.rawpath.clicked.connect(self.selectraw)
@@ -171,25 +186,41 @@ class Form(QDialog):
         self.deljpgbutton.clicked.connect(self.deljpg)
         self.delrawbutton.clicked.connect(self.delraw)
         self.delallbutton.clicked.connect(self.delall)
+        self.resetbutton.clicked.connect(self.resetall)
         self.setFixedWidth(500)
         self.setWindowTitle("Cassiodorus 4")
 
     def selectjpg(self):
-        self.jpgpath.setText(str(QFileDialog.getExistingDirectory(self, "Válassz JPG-mappát")))
+        jpgpathstr = str(QFileDialog.getExistingDirectory(self, "Válassz JPG-mappát"))
+        self.jpgpath.setText(jpgpathstr)
+        if jpgpathstr.endswith("AJ"):
+            guessedrawpathstr = jpgpathstr[:-2]+'R'
+            if self.rawpath.text() == "RAW mappa kijelölése" and os.path.exists(guessedrawpathstr):
+                self.rawpath.setText(guessedrawpathstr)
 
     def selectraw(self):
-        self.rawpath.setText(str(QFileDialog.getExistingDirectory(self, "Válassz RAW-mappát")))
+        rawpathstr = str(QFileDialog.getExistingDirectory(self, "Válassz RAW-mappát"))
+        self.rawpath.setText(rawpathstr)
+        if rawpathstr.endswith("R"):
+            guessedjpgpathstr = rawpathstr[:-1]+'AJ'
+            print(self.jpgpath.text() == "JPG mappa kijelölése" and os.path.exists(guessedjpgpathstr))
+            if self.jpgpath.text() == "JPG mappa kijelölése" and os.path.exists(guessedjpgpathstr):
+                self.jpgpath.setText(guessedjpgpathstr)
 
     def docompare(self):
         self.results.setText(load_and_run(self.rawpath.text(), self.jpgpath.text()))
         self.deljpgbutton.show()
         self.delrawbutton.show()
         self.delallbutton.show()
+        self.resetbutton.show()
 
     def deljpg(self):
         deletednum = 0
         for jpg in jpgstodelete:
-            os.remove(self.jpgpath.text() + "\\" + str(jpg))
+            try:
+                os.remove(self.rawpath.text() + "\\" + str(jpg))
+            except:
+                print("Sikertelen törlés: "+str(jpg))
             deletednum = deletednum + 1
         if deletednum > 0:
             self.results.setText(str(deletednum) + " db JPG törölve.")
@@ -199,7 +230,10 @@ class Form(QDialog):
     def delraw(self):
         deletednum = 0
         for raw in rawstodelete:
-            os.remove(self.rawpath.text() + "\\" + str(raw))
+            try:
+                os.remove(self.rawpath.text() + "\\" + str(raw))
+            except:
+                print("Sikertelen törlés: "+str(raw))
             deletednum = deletednum + 1
         if deletednum > 0:
             self.results.setText(str(deletednum) + " db RAW törölve.")
@@ -209,16 +243,31 @@ class Form(QDialog):
     def delall(self):
         deletednumj = 0
         for jpg in jpgstodelete:
-            os.remove(self.jpgpath.text() + "\\" + str(jpg))
+            try:
+                os.remove(self.rawpath.text() + "\\" + str(jpg))
+            except:
+                print("Sikertelen törlés: "+str(jpg))
             deletednumj = deletednumj + 1
         deletednumr = 0
         for raw in rawstodelete:
-            os.remove(self.rawpath.text() + "\\" + str(raw))
+            try:
+                os.remove(self.rawpath.text() + "\\" + str(raw))
+            except:
+                print("Sikertelen törlés: "+str(raw))
             deletednumr = deletednumr + 1
         if deletednumj > 0 and deletednumr > 0:
             self.results.setText(str(deletednumj) + " db JPG törölve.\n"+str(deletednumr) + " db RAW törölve.")
         else:
             self.results.setText("Nem volt mit törölni.")
+
+    def resetall(self):
+        self.rawpath.setText("RAW mappa kijelölése")
+        self.jpgpath.setText("JPG mappa kijelölése")
+        self.deljpgbutton.hide()
+        self.delrawbutton.hide()
+        self.delallbutton.hide()
+        self.resetbutton.hide()
+        self.results.setText("Az indításhoz válassz mappákat!")
 
 
 if __name__ == '__main__':
